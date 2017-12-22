@@ -60,6 +60,16 @@ abstract class AbstractIntegrationSpec : StringSpec() {
     protected lateinit var downloadDir: File
 
     /**
+     * Indicate if Package Manager for given [pkg] allows projects to have no scopes (no dependencies)
+     */
+    protected open val allowEmptyScopes: Boolean = false
+
+    /**
+     * A temporary directory used as working directory for the test suite.
+     */
+    private val outputDir = createTempDir()
+
+    /**
      * The instance needs to be shared between tests because otherwise the source code of [pkg] would have to be
      * downloaded once per test.
      */
@@ -107,8 +117,12 @@ abstract class AbstractIntegrationSpec : StringSpec() {
                     VersionControlSystem.forProvider(result.project.vcsProcessed.provider) shouldBe
                             VersionControlSystem.forProvider(pkg.vcs.provider)
                     result.project.vcsProcessed.url shouldBe pkg.vcs.url
-                    result.project.scopes shouldNot beEmpty()
-                    result.packages shouldNot beEmpty()
+                    if (!allowEmptyScopes) {
+                        result.project.scopes shouldNot beEmpty()
+                    }
+                    if (result.project.scopes.flatMap { it.dependencies }.isNotEmpty()) {
+                        result.packages shouldNot beEmpty()
+                    }
                     result.hasErrors() shouldBe false
                 }
             }

@@ -52,6 +52,8 @@ class DrupalIntegrationTest : AbstractIntegrationSpec() {
             )
     )
 
+    override val allowEmptyScopes = true
+
     override val expectedDefinitionFiles by lazy {
         mapOf(
                 PhpComposer to listOf(
