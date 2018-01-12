@@ -44,6 +44,7 @@ class PackageManagerTest : WordSpec({
             result[SBT] shouldBe listOf(File(projectDir, "build.sbt"))
             result[NPM] shouldBe listOf(File(projectDir, "package.json"))
             result[PIP] shouldBe listOf(File(projectDir, "setup.py"))
+            result[Bundler] shouldBe listOf(File(projectDir, "Gemfile"))
         }
 
         "find only files for active package managers" {
