@@ -1,0 +1,63 @@
+---
+allowDynamicVersions: true
+project:
+  id:
+    package_manager: "Bower"
+    namespace: ""
+    name: "test-pro"
+    version: ""
+  declared_licenses:
+  - "MIT"
+  aliases: []
+  vcs:
+    provider: "Git"
+    url: "<REPLACE_URL>"
+    revision: "<REPLACE_REVISION>"
+    path: "analyzer/src/funTest/assets/projects/synthetic/bower"
+  vcs_processed:
+    provider: "Git"
+    url: "<REPLACE_URL_PROCESSED>"
+    revision: "<REPLACE_REVISION>"
+    path: "analyzer/src/funTest/assets/projects/synthetic/bower"
+  homepage_url: "https://github.com/heremaps/oss-review-toolkit"
+  scopes:
+  - name: "dependencies"
+    delivered: true
+    dependencies:
+    - namespace: "jquery"
+      name: "jquery"
+      version: "3.3.1"
+      dependencies: []
+      errors: []
+  - name: "devDependencies"
+    delivered: true
+    dependencies: []
+packages:
+- id:
+    package_manager: "Bower"
+    namespace: "jquery"
+    name: "jquery"
+    version: "3.3.1"
+  declared_licenses:
+  - "MIT"
+  description: ""
+  homepage_url: "https://github.com/jquery/jquery-dist"
+  binary_artifact:
+    url: ""
+    hash: ""
+    hash_algorithm: ""
+  source_artifact:
+    url: ""
+    hash: ""
+    hash_algorithm: ""
+  vcs:
+    provider: "Git"
+    url: "https://github.com/jquery/jquery-dist.git"
+    revision: "9e8ec3d10fad04748176144f108d7355662ae75e"
+    path: ""
+  vcs_processed:
+    provider: "Git"
+    url: "https://github.com/jquery/jquery-dist.git"
+    revision: "9e8ec3d10fad04748176144f108d7355662ae75e"
+    path: ""
+errors: []

@@ -1,0 +1,25 @@
+{
+  "name": "test-pro",
+  "authors": [
+    "Piotr Nowakowski <piotr.nowakowski@meelogic.com>"
+  ],
+  "description": "test project for dependency analyzis test",
+  "main": "",
+  "keywords": [
+    "test",
+    "bower"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/heremaps/oss-review-toolkit",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "jquery": "^3.3.1"
+  }
+}
