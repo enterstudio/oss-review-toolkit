@@ -19,7 +19,10 @@
 
 package com.here.ort.scanner
 
+import com.here.ort.model.Identifier
 import com.here.ort.model.Package
+import com.here.ort.model.RemoteArtifact
+import com.here.ort.model.VcsInfo
 import com.here.ort.scanner.scanners.*
 
 import java.io.File
@@ -41,6 +44,24 @@ abstract class Scanner {
     }
 
     data class Result(val licenses: SortedSet<String>, val errors: SortedSet<String>)
+
+    data class ScanMetadata(
+        val sourceArtifact: RemoteArtifact?,
+        val vcsInfo: VcsInfo?,
+        val scannerVersion: String,
+        val scannerConfiguration: Map<String, String>,
+        val timestamp: Long // TODO: should we serialize this in a human-readable format?
+    )
+
+    data class ScannerResults(
+        val metadata: ScanMetadata,
+        val result: Any
+    )
+
+    data class ScanResult(
+        val identifier: Identifier,
+        val results: Map<String, ScannerResults>
+    )
 
     abstract fun scan(packages: List<Package>, outputDirectory: File, downloadDirectory: File? = null)
             : Map<Package, Result>
