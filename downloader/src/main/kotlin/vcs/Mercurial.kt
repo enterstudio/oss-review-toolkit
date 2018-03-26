@@ -91,7 +91,7 @@ object Mercurial : VersionControlSystem() {
 
     override fun isApplicableUrl(vcsUrl: String) = ProcessCapture("hg", "identify", vcsUrl).isSuccess()
 
-    private fun initWorkingTree(targetDir: File, vcs: VcsInfo): WorkingTree {
+    override fun initWorkingTree(targetDir: File, vcs: VcsInfo): WorkingTree {
         // We cannot detect beforehand if the Large Files extension would be required, so enable it by default.
         val extensionsList = mutableListOf(EXTENSION_LARGE_FILES)
 
@@ -117,44 +117,15 @@ object Mercurial : VersionControlSystem() {
         return getWorkingTree(targetDir)
     }
 
-    override fun download(pkg: Package, targetDir: File, allowMovingRevisions: Boolean,
-                          recursive: Boolean): WorkingTree {
-        log.info { "Using $this version ${getVersion()}." }
+    override fun updateWorkingTree(targetDir: File, revision: String, recursive: Boolean) {
+        // To safe network bandwidth, only pull exactly the revision we want. Do not use "-u" to update the
+        // working tree just yet, as Mercurial would only update if new changesets were pulled. But that might
+        // not be the case if the requested revision is already available locally.
+        run(targetDir, "pull", "-r", revision)
 
-        try {
-            val workingTree = initWorkingTree(targetDir, pkg.vcsProcessed)
+        // Explicitly update the working tree to the desired revision.
+        run(targetDir, "update", revision)
 
-            val revision = if (allowMovingRevisions || isFixedRevision(pkg.vcsProcessed.revision)) {
-                pkg.vcsProcessed.revision
-            } else {
-                log.info { "Trying to guess a $this revision for version '${pkg.id.version}'." }
-                workingTree.guessRevisionName(pkg.id.name, pkg.id.version).also { revision ->
-                    if (revision.isBlank()) {
-                        throw IOException("Unable to determine a revision to checkout.")
-                    }
-
-                    log.warn {
-                        "Using guessed $this revision '$revision' for version '${pkg.id.version}'. This might cause " +
-                                "the downloaded source code to not match the package version."
-                    }
-                }
-            }
-
-            // To safe network bandwidth, only pull exactly the revision we want. Do not use "-u" to update the
-            // working tree just yet, as Mercurial would only update if new changesets were pulled. But that might
-            // not be the case if the requested revision is already available locally.
-            run(targetDir, "pull", "-r", revision)
-
-            // Explicitly update the working tree to the desired revision.
-            run(targetDir, "update", revision)
-
-            return workingTree
-        } catch (e: IOException) {
-            if (com.here.ort.utils.printStackTrace) {
-                e.printStackTrace()
-            }
-
-            throw DownloadException("$this failed to download from URL '${pkg.vcsProcessed.url}'.", e)
-        }
+        // TODO: Implement updating of subrepositories.
     }
 }

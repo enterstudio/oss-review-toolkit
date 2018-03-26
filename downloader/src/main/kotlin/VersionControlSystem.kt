@@ -296,13 +296,45 @@ abstract class VersionControlSystem {
      *
      * @throws DownloadException In case the download failed.
      */
-    abstract fun download(pkg: Package, targetDir: File, allowMovingRevisions: Boolean = false,
-                          recursive: Boolean = true): WorkingTree
+    fun download(pkg: Package, targetDir: File, allowMovingRevisions: Boolean = false, recursive: Boolean = true)
+            : WorkingTree {
+        log.info { "Using $this version ${getVersion()}." }
 
-    /**
-     * Check whether the given [revision] is likely to name a fixed revision that does not move.
-     */
-    fun isFixedRevision(revision: String) = revision.isNotBlank() && revision !in movingRevisionNames
+        try {
+            val workingTree = initWorkingTree(targetDir, pkg.vcsProcessed)
+
+            val revision = pkg.vcsProcessed.revision.takeIf {
+                it.isNotBlank() && (it !in movingRevisionNames || allowMovingRevisions)
+            } ?: run {
+                log.info { "Trying to guess a $this revision for version '${pkg.id.version}'." }
+
+                workingTree.guessRevisionName(pkg.id.name, pkg.id.version).also { revision ->
+                    if (revision.isBlank()) {
+                        throw IOException("Unable to determine a revision to checkout.")
+                    }
+
+                    log.warn {
+                        "Using guessed $this revision '$revision' for version '${pkg.id.version}'. This might cause " +
+                                "the downloaded source code to not match the package version."
+                    }
+                }
+            }
+
+            updateWorkingTree(targetDir, revision, recursive)
+
+            return workingTree
+        } catch (e: IOException) {
+            if (com.here.ort.utils.printStackTrace) {
+                e.printStackTrace()
+            }
+
+            throw DownloadException("$this failed to download from URL '${pkg.vcsProcessed.url}'.", e)
+        }
+    }
+
+    abstract fun initWorkingTree(targetDir: File, vcs: VcsInfo): WorkingTree
+
+    abstract fun updateWorkingTree(targetDir: File, revision: String, recursive: Boolean)
 
     /**
      * Check whether the VCS tool is at least of the specified [expectedVersion], e.g. to check for features.
