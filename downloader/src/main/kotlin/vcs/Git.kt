@@ -24,6 +24,7 @@ import ch.frankel.slf4k.*
 import com.here.ort.downloader.DownloadException
 import com.here.ort.downloader.VersionControlSystem
 import com.here.ort.model.Package
+import com.here.ort.model.VcsInfo
 import com.here.ort.utils.OS
 import com.here.ort.utils.log
 import com.here.ort.utils.ProcessCapture
@@ -96,6 +97,25 @@ object Git : GitBase() {
 
     override fun isApplicableUrl(vcsUrl: String) = ProcessCapture("git", "ls-remote", vcsUrl).isSuccess()
 
+    private fun initWorkingTree(targetDir: File, vcs: VcsInfo): WorkingTree {
+        // Do not use "git clone" to have more control over what is being fetched.
+        run(targetDir, "init")
+        run(targetDir, "remote", "add", "origin", vcs.url)
+
+        if (OS.isWindows) {
+            run(targetDir, "config", "core.longpaths", "true")
+        }
+
+        if (vcs.path.isNotBlank()) {
+            log.info { "Configuring Git to do sparse checkout of path '${vcs.path}'." }
+            run(targetDir, "config", "core.sparseCheckout", "true")
+            val gitInfoDir = File(targetDir, ".git/info").apply { safeMkdirs() }
+            File(gitInfoDir, "sparse-checkout").writeText(vcs.path)
+        }
+
+        return getWorkingTree(targetDir)
+    }
+
     override fun download(pkg: Package, targetDir: File, allowMovingRevisions: Boolean,
                           recursive: Boolean): WorkingTree {
         log.info { "Using $this version ${getVersion()}." }
@@ -116,22 +136,7 @@ object Git : GitBase() {
     }
 
     private fun createWorkingTree(pkg: Package, targetDir: File, allowMovingRevisions: Boolean): WorkingTree {
-        // Do not use "git clone" to have more control over what is being fetched.
-        run(targetDir, "init")
-        run(targetDir, "remote", "add", "origin", pkg.vcsProcessed.url)
-
-        if (OS.isWindows) {
-            run(targetDir, "config", "core.longpaths", "true")
-        }
-
-        if (pkg.vcsProcessed.path.isNotBlank()) {
-            log.info { "Configuring Git to do sparse checkout of path '${pkg.vcsProcessed.path}'." }
-            run(targetDir, "config", "core.sparseCheckout", "true")
-            val gitInfoDir = File(targetDir, ".git/info").apply { safeMkdirs() }
-            File(gitInfoDir, "sparse-checkout").writeText(pkg.vcsProcessed.path)
-        }
-
-        val workingTree = getWorkingTree(targetDir)
+        val workingTree = initWorkingTree(targetDir, pkg.vcsProcessed)
 
         val revisionCandidates = mutableListOf<String>()
 

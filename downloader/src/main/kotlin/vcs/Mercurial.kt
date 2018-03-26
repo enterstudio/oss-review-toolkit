@@ -24,6 +24,7 @@ import ch.frankel.slf4k.*
 import com.here.ort.downloader.DownloadException
 import com.here.ort.downloader.VersionControlSystem
 import com.here.ort.model.Package
+import com.here.ort.model.VcsInfo
 import com.here.ort.utils.ProcessCapture
 import com.here.ort.utils.getCommandVersion
 import com.here.ort.utils.log
@@ -90,34 +91,38 @@ object Mercurial : VersionControlSystem() {
 
     override fun isApplicableUrl(vcsUrl: String) = ProcessCapture("hg", "identify", vcsUrl).isSuccess()
 
+    private fun initWorkingTree(targetDir: File, vcs: VcsInfo): WorkingTree {
+        // We cannot detect beforehand if the Large Files extension would be required, so enable it by default.
+        val extensionsList = mutableListOf(EXTENSION_LARGE_FILES)
+
+        if (vcs.path.isNotBlank() && isAtLeastVersion("4.3")) {
+            // Starting with version 4.3 Mercurial has experimental built-in support for sparse checkouts, see
+            // https://www.mercurial-scm.org/wiki/WhatsNew#Mercurial_4.3_.2F_4.3.1_.282017-08-10.29
+            extensionsList.add(EXTENSION_SPARSE)
+        }
+
+        run(targetDir, "init")
+        File(targetDir, ".hg/hgrc").writeText("""
+                [paths]
+                default = ${vcs.url}
+                [extensions]
+
+                """.trimIndent() + extensionsList.joinToString(separator = "\n"))
+
+        if (extensionsList.contains(EXTENSION_SPARSE)) {
+            log.info { "Configuring Mercurial to do sparse checkout of path '${vcs.path}'." }
+            run(targetDir, "debugsparse", "-I", "${vcs.path}/**")
+        }
+
+        return getWorkingTree(targetDir)
+    }
+
     override fun download(pkg: Package, targetDir: File, allowMovingRevisions: Boolean,
                           recursive: Boolean): WorkingTree {
         log.info { "Using $this version ${getVersion()}." }
 
         try {
-            // We cannot detect beforehand if the Large Files extension would be required, so enable it by default.
-            val extensionsList = mutableListOf(EXTENSION_LARGE_FILES)
-
-            if (pkg.vcsProcessed.path.isNotBlank() && isAtLeastVersion("4.3")) {
-                // Starting with version 4.3 Mercurial has experimental built-in support for sparse checkouts, see
-                // https://www.mercurial-scm.org/wiki/WhatsNew#Mercurial_4.3_.2F_4.3.1_.282017-08-10.29
-                extensionsList.add(EXTENSION_SPARSE)
-            }
-
-            run(targetDir, "init")
-            File(targetDir, ".hg/hgrc").writeText("""
-                [paths]
-                default = ${pkg.vcsProcessed.url}
-                [extensions]
-
-                """.trimIndent() + extensionsList.joinToString(separator = "\n"))
-
-            if (extensionsList.contains(EXTENSION_SPARSE)) {
-                log.info { "Configuring Mercurial to do sparse checkout of path '${pkg.vcsProcessed.path}'." }
-                run(targetDir, "debugsparse", "-I", "${pkg.vcsProcessed.path}/**")
-            }
-
-            val workingTree = getWorkingTree(targetDir)
+            val workingTree = initWorkingTree(targetDir, pkg.vcsProcessed)
 
             val revision = if (allowMovingRevisions || isFixedRevision(pkg.vcsProcessed.revision)) {
                 pkg.vcsProcessed.revision
